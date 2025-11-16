@@ -1,7 +1,0 @@
-/home/zobarcik/Documents/heap/build/CMakeFiles/my_app.dir
-/home/zobarcik/Documents/heap/build/CMakeFiles/edit_cache.dir
-/home/zobarcik/Documents/heap/build/CMakeFiles/rebuild_cache.dir
-/home/zobarcik/Documents/heap/build/CMakeFiles/list_install_components.dir
-/home/zobarcik/Documents/heap/build/CMakeFiles/install.dir
-/home/zobarcik/Documents/heap/build/CMakeFiles/install/local.dir
-/home/zobarcik/Documents/heap/build/CMakeFiles/install/strip.dir

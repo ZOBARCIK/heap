@@ -9,7 +9,7 @@ struct heap {
 
 // free memory block: [offset, offset + size)
 struct FreeBlock {
-    int offset; // starting index into the buffer
+    int offset; // starting index into the buffer, this offset keeps track of the distance to other free blocks, if neighbours, can be joined together
     int size;   // number of bytes
 };
 

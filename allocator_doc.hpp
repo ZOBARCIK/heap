@@ -1,69 +1,112 @@
 #ifndef ALLOCATOR_DOC_HPP
 #define ALLOCATOR_DOC_HPP
 
-#include "allocator.hpp"
+#include <cstddef>
 
-/// @brief Fixed-size heap-based arena allocator managing a contiguous byte buffer.
-/// @details
-/// ByteHeapAllocator owns a fixed-size buffer and manages free regions inside it using:
-///   - a max-heap of FreeBlock entries (block_heap) ordered by block size, and
-///   - a std::map keyed by offset to support neighbor coalescing on deallocation.
-/// Allocation requests are satisfied by splitting the largest suitable free block.
+/// Documentation-only header for `ByteHeapAllocator`.
 ///
-/// Typical usage:
-/// @code
-///   ByteHeapAllocator arena(1024);          // 1 KB arena
-///   void* p = arena.allocate(128);          // allocate 128 bytes
-///   arena.deallocate(p, 128);               // free those 128 bytes
-///   arena.print_free_blocks();              // debug the free list
-/// @endcode
-class ByteHeapAllocator {
-public:
-    /// @brief Constructs a heap-based arena of the given size in bytes.
-    /// @details Allocates an internal buffer of @p total_bytes and initializes the
-    ///          free list with a single FreeBlock covering the entire buffer.
-    /// @param total_bytes Total size of the managed memory buffer, in bytes.
-    explicit ByteHeapAllocator(int total_bytes);
+/// This header provides Doxygen-style documentation and a forward declaration
+/// without defining the class, preventing duplicate-definition errors when
+/// included alongside the real `allocator.hpp` implementation.
+///
+/// See `allocator.hpp` for the actual implementation.
+class ByteHeapAllocator; // forward declaration for documentation purposes
 
-    /// @brief Destructor that releases the internal free-block array and buffer.
-    /// @details Frees the internal heap array of FreeBlock entries and lets
-    ///          std::unique_ptr automatically release the raw byte buffer.
-    ~ByteHeapAllocator();
+/**
+ * @class ByteHeapAllocator
+ * @brief Fixed-size heap-based arena allocator managing a contiguous byte buffer.
+ *
+ * This allocator owns a single contiguous buffer and manages free regions using
+ * a max-heap (ordered by block size) together with a map keyed by offset to
+ * support fast coalescing of adjacent free blocks on deallocation.
+ *
+ * The following member functions are documented here for reference; the real
+ * definitions live in `allocator.hpp`.
+ */
 
-    /// @brief Allocates a block of memory from the arena.
-    /// @details
-    ///   - Chooses the largest available FreeBlock from the internal @c block_heap.
-    ///   - If the chosen block is large enough, it is removed from the free list,
-    ///     split into [used, leftover], and the leftover is reinserted as a new FreeBlock.
-    ///   - Returns a pointer into the internal buffer on success, or @c nullptr if there
-    ///     is no block large enough to satisfy the request.
-    /// @param bytes Number of bytes to allocate (must be > 0).
-    /// @return Pointer to a memory region of at least @p bytes, or @c nullptr on failure.
-    /// @usage void* p = allocator.allocate(256);
-    void* allocate(int bytes);
+/**
+ * @fn ByteHeapAllocator::ByteHeapAllocator(int total_bytes)
+ * @brief Constructs an arena of the given size and initializes the free list.
+ * @param total_bytes Total number of bytes managed by the allocator.
+ *
+ * Allocates an internal buffer of `total_bytes`, prepares the internal heap
+ * storage (capacity for free-block entries) and inserts a single initial
+ * FreeBlock covering the whole buffer.
+ *
+ * Complexity: O(1)
+ */
 
-    /// @brief Deallocates a previously allocated memory block.
-    /// @details
-    ///   - Converts @p ptr back into an offset inside the internal buffer.
-    ///   - Creates a FreeBlock of size @p bytes at that offset.
-    ///   - Attempts to coalesce this block with immediate neighbors (previous/next) using
-    ///     the map keyed by offset, then reinserts the merged block into both the map
-    ///     and the max-heap of free blocks.
-    ///   - Does nothing if @p ptr is null or @p bytes is non-positive.
-    /// @param ptr Pointer previously returned by allocate() and still owned by the caller.
-/// @param bytes Size of the allocated block, in bytes, that is being freed.
-/// @usage allocator.deallocate(p, 256);
-    void deallocate(void* ptr, int bytes);
+/**
+ * @fn ByteHeapAllocator::~ByteHeapAllocator()
+ * @brief Destructor that releases internal resources.
+ *
+ * Frees the internal array used for heap bookkeeping; the raw byte buffer is
+ * managed by a `std::unique_ptr` and is released automatically.
+ *
+ * Complexity: O(1)
+ */
 
-    /// @brief Prints the current list of free blocks to std::cout for debugging.
-    /// @details Iterates over the internal block_heap and prints each FreeBlock's
-    ///          index, offset, and size. Useful for visualizing fragmentation and
-    ///          allocator behavior over time.
-/// @usage allocator.print_free_blocks();
-    void print_free_blocks() const;
+/**
+ * @fn void* ByteHeapAllocator::allocate(int bytes)
+ * @brief Allocate a block of at least `bytes` bytes from the arena.
+ * @param bytes Number of bytes requested (must be > 0).
+ * @return Pointer to allocated memory within the arena, or `nullptr` on failure.
+ *
+ * Selection policy: picks the largest free block (root of the max-heap), and
+ * if it is large enough, removes it from the free lists, splits off the
+ * requested portion and reinserts any leftover as a new free block.
+ *
+ * Alignment: no explicit alignment guarantees are provided (byte-granular).
+ *
+ * Complexity: O(n) worst-case due to heap rebuild on removal (current
+ * implementation removes by linear search then rebuilds the heap); typically
+ * amortized better for small heaps.
+ */
 
-private:
-    // implementation details are documented in allocator.hpp
-};
+/**
+ * @fn void ByteHeapAllocator::deallocate(void* ptr, int bytes)
+ * @brief Return a previously allocated block back to the free lists.
+ * @param ptr Pointer previously returned by `allocate()`.
+ * @param bytes Size in bytes of the block being freed.
+ *
+ * The function computes the offset of `ptr` in the arena buffer, constructs a
+ * FreeBlock for that region, attempts to coalesce with immediate neighbors
+ * (previous and next blocks found via the offset-ordered `std::map`), removes
+ * any merged neighbors from the free lists and reinserts the final merged
+ * block.
+ *
+ * Safety: noop if `ptr` is `nullptr` or `bytes <= 0`.
+ *
+ * Complexity: O(log m) map lookups plus O(n) heap rebuild when neighbors are
+ * removed (where m is number of free blocks and n is heap size in rebuild).
+ */
+
+/**
+ * @fn void ByteHeapAllocator::print_free_blocks() const
+ * @brief Debug helper that prints the contents of the heap of free blocks.
+ *
+ * Iterates the internal `block_heap` array (1-based heap) and prints each
+ * `FreeBlock`'s index, offset and size to `std::cout`.
+ */
+
+/**
+ * @fn void ByteHeapAllocator::insert_free_block(const FreeBlock& fb)
+ * @brief Inserts a `FreeBlock` into both the offset-ordered map and the heap.
+ * @param fb The free block to insert.
+ *
+ * Called internally when creating or returning free regions; ensures the block
+ * is present in both bookkeeping structures.
+ */
+
+/**
+ * @fn void ByteHeapAllocator::remove_free_block(const FreeBlock& fb)
+ * @brief Removes a `FreeBlock` from both the map and the heap.
+ * @param fb The free block to remove (matched by offset and size).
+ *
+ * Implementation note: the current removal searches the heap linearly to find
+ * the matching entry, swaps the last element into the hole and decrements the
+ * heap size, then rebuilds the heap to restore the max-heap property.
+ */
 
 #endif // ALLOCATOR_DOC_HPP
+///

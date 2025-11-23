@@ -6,15 +6,14 @@
 #include "heap_memory_resource_doc.hpp"
 class HeapMemoryResource : public std::pmr::memory_resource {
 public:
-    // We store a reference to your arena
+    // store a reference to the arena
     explicit HeapMemoryResource(ByteHeapAllocator& alloc)
         : alloc_(alloc) {}
 
 protected:
     // PMR calls this when a container wants to allocate
     void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-        // ⚠ Alignment is ignored for now (OK for byte/char use).
-        // For real-world use with aligned types, you'd adjust your allocator.
+        // alignment is ignored for now 
         (void)alignment; // suppress unused warning for now
 
         return alloc_.allocate(static_cast<int>(bytes));
@@ -27,7 +26,7 @@ protected:
         alloc_.deallocate(p, static_cast<int>(bytes));
     }
 
-    // Used to compare two resources for equality
+    // compare two resources for equality
     bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override {
         // simplest: only equal if it's literally the same object
         return this == &other;

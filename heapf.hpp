@@ -6,7 +6,7 @@
 #include <cstdio>
 #include "heapf_doc.hpp"
 // ---------- int min-heap on `heap` ----------
-
+/*
 // heap array is 1-based: arr[1..size]
 inline void min_heapify(heap &h, int index)
 {
@@ -48,7 +48,7 @@ inline void heap_remove_min(heap &h)
     // Restore the min-heap property
     min_heapify(h, 1);
 }
-
+*/
 
 // ---------- FreeBlock max-heap on `block_heap` ----------
 
